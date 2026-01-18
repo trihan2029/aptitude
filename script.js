@@ -1,5 +1,5 @@
 // Configuration
-const totalQuestions = 33;
+const totalQuestions = 50;
 const timePerQuestion = 60; // seconds
 const totalTime = totalQuestions * timePerQuestion;
 
