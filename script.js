@@ -142,14 +142,56 @@ function submitTest() {
   saveTimeSpent();
 
   let correct = 0;
-  answers.forEach((a, i) => {
-    if (a === correctAnswers[i]) correct++;
+  let wrong = 0;
+  let guessedCount = 0;
+
+  answers.forEach((ans, i) => {
+    if (ans !== null) {
+      ans === correctAnswers[i] ? correct++ : wrong++;
+    }
+    if (guessed[i]) guessedCount++;
   });
 
+  const attempted = correct + wrong;
+  const percentage = ((correct / totalQuestions) * 100).toFixed(2);
+
   alert(
-    `Test Completed\n\nCorrect: ${correct}\nWrong: ${totalQuestions - correct}`
+    `✅ Test Completed\n\n` +
+    `Total Questions: ${totalQuestions}\n` +
+    `Attempted: ${attempted}\n` +
+    `Correct: ${correct}\n` +
+    `Wrong: ${wrong}\n` +
+    `Guessed: ${guessedCount}\n` +
+    `Percentage: ${percentage}%`
   );
+
+  generateReport();
 }
+function generateReport() {
+  let report = "Q.No | Your Answer | Correct Answer | Time Spent(sec) | Guessed\n";
+  report += "-------------------------------------------------------------\n";
+
+  for (let i = 0; i < totalQuestions; i++) {
+    const yourAns = answers[i] ?? "NA";
+    const correctAns = correctAnswers[i];
+    const timeSpent = perQuestionTimers[i];
+    const wasGuessed = guessed[i] ? "Yes" : "No";
+
+    if (yourAns !== correctAns || guessed[i]) {
+      report +=
+        `Q${i + 1} | ${yourAns} | ${correctAns} | ${timeSpent} | ${wasGuessed}\n`;
+    }
+  }
+
+  const blob = new Blob([report], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "exam_summary.txt";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 
 // ================= LOAD & SHUFFLE =================
 async function initTest() {

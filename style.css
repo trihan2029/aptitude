@@ -87,3 +87,17 @@ h1, h2 {
   margin-top: 20px;
   font-size: 20px;
 }
+#unansweredList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+#unansweredList span {
+  min-width: 32px;
+  text-align: center;
+}
+
