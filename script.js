@@ -1,21 +1,28 @@
-// Configuration
+// ================= CONFIGURATION =================
 const totalQuestions = 50;
 const timePerQuestion = 180; // seconds
 const totalTime = totalQuestions * timePerQuestion;
 
+// ================= STATE =================
 let questions = [];
 let correctAnswers = [];
 
 let currentQuestion = 0;
 let answers = Array(totalQuestions).fill(null);
 let guessed = Array(totalQuestions).fill(false);
+
 let remainingTime = totalTime;
 let timerInterval;
+
 let perQuestionTimers = Array(totalQuestions).fill(0);
 let questionStartTime = Date.now();
-let isPaused = false;
 
-// Fisher–Yates Shuffle
+// Pause control
+let isPaused = false;
+let pauseStartTime = null;
+let totalPausedTime = 0;
+
+// ================= UTIL =================
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -23,7 +30,7 @@ function shuffleArray(array) {
   }
 }
 
-// Start Timer
+// ================= TIMER =================
 function startTimer() {
   timerInterval = setInterval(() => {
     if (!isPaused) {
@@ -37,31 +44,49 @@ function startTimer() {
   }, 1000);
 }
 
-// Update Timer Display
 function updateTimer() {
   const minutes = Math.floor(remainingTime / 60);
   const seconds = remainingTime % 60;
   document.getElementById('timer').textContent =
     `⏰ Time Left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-  document.getElementById('timer').style.fontWeight = 'bold';
-  document.getElementById('timer').style.color = 'red';
 }
 
-// Pause / Resume
+// ================= PAUSE / RESUME =================
 function togglePause() {
   const btn = document.getElementById('pauseBtn');
-  isPaused = !isPaused;
 
-  if (isPaused) {
-    saveTimeSpent();
+  if (!isPaused) {
+    // PAUSE
+    isPaused = true;
+    pauseStartTime = Date.now();
     btn.textContent = '▶ Resume';
   } else {
-    questionStartTime = Date.now();
+    // RESUME
+    isPaused = false;
+    totalPausedTime += Date.now() - pauseStartTime;
+    pauseStartTime = null;
     btn.textContent = '⏸ Pause';
   }
 }
 
-// Load Question
+// ================= TIME TRACKING =================
+function saveTimeSpent() {
+  if (isPaused) return;
+
+  const now = Date.now();
+  const activeTime = Math.floor(
+    (now - questionStartTime - totalPausedTime) / 1000
+  );
+
+  if (currentQuestion >= 0 && currentQuestion < totalQuestions) {
+    perQuestionTimers[currentQuestion] += Math.max(0, activeTime);
+  }
+
+  questionStartTime = now;
+  totalPausedTime = 0;
+}
+
+// ================= QUESTIONS =================
 function loadQuestion(index) {
   saveTimeSpent();
 
@@ -91,25 +116,17 @@ function loadQuestion(index) {
   guessBox.onchange = () => guessed[index] = guessBox.checked;
 
   updateUnanswered();
+
   questionStartTime = Date.now();
+  totalPausedTime = 0;
 }
 
-// Save Time Spent
-function saveTimeSpent() {
-  const now = Date.now();
-  const timeSpent = Math.floor((now - questionStartTime) / 1000);
-  if (currentQuestion >= 0 && currentQuestion < totalQuestions) {
-    perQuestionTimers[currentQuestion] += timeSpent;
-  }
-}
-
-// Select Option
 function selectOption(qIndex, option) {
   answers[qIndex] = option;
   loadQuestion(qIndex);
 }
 
-// Navigation
+// ================= NAVIGATION =================
 function nextQuestion() {
   if (currentQuestion < totalQuestions - 1) {
     loadQuestion(currentQuestion + 1);
@@ -122,14 +139,14 @@ function prevQuestion() {
   }
 }
 
-// Update Question Status
+// ================= STATUS PANEL =================
 function updateUnanswered() {
   const list = document.getElementById('unansweredList');
   list.innerHTML = '';
 
   answers.forEach((ans, idx) => {
     const span = document.createElement('span');
-    span.textContent = `${idx + 1}`;
+    span.textContent = idx + 1;
     span.style.margin = '5px';
     span.style.cursor = 'pointer';
     span.style.fontWeight = 'bold';
@@ -142,7 +159,7 @@ function updateUnanswered() {
   });
 }
 
-// Submit Test
+// ================= SUBMIT =================
 function submitTest() {
   clearInterval(timerInterval);
   saveTimeSpent();
@@ -169,16 +186,16 @@ function submitTest() {
   generateReport();
 }
 
-// Report
+// ================= REPORT =================
 function generateReport() {
-  let report = "Q | Your | Correct | Time | Guessed\n";
-  report += "-------------------------------------\n";
+  let report = "Q | Your | Correct | Time(s) | Guessed\n";
+  report += "---------------------------------------\n";
 
   for (let i = 0; i < totalQuestions; i++) {
     if (answers[i] !== correctAnswers[i] || guessed[i]) {
       report +=
         `${i + 1} | ${answers[i] ?? 'NA'} | ${correctAnswers[i]} | ` +
-        `${perQuestionTimers[i]}s | ${guessed[i] ? 'Yes' : 'No'}\n`;
+        `${perQuestionTimers[i]} | ${guessed[i] ? 'Yes' : 'No'}\n`;
     }
   }
 
@@ -189,7 +206,7 @@ function generateReport() {
   a.click();
 }
 
-// Load Answers + Shuffle Questions
+// ================= LOAD & SHUFFLE =================
 function loadCorrectAnswers(fileUrl) {
   fetch(fileUrl)
     .then(res => res.text())
@@ -207,7 +224,7 @@ function loadCorrectAnswers(fileUrl) {
     });
 }
 
-// Init
+// ================= INIT =================
 window.onload = () => {
   loadCorrectAnswers('answers.txt');
   loadQuestion(0);
