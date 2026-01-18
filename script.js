@@ -1,6 +1,6 @@
 // Configuration
 const totalQuestions = 50;
-const timePerQuestion = 60; // seconds
+const timePerQuestion = 180; // seconds
 const totalTime = totalQuestions * timePerQuestion;
 
 const questions = Array.from({ length: totalQuestions }, (_, i) => ({
