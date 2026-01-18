@@ -23,12 +23,20 @@ h1, h2 {
   font-weight: bold;
   color: darkred;
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+}
+
+#pauseBtn {
+  display: block;
+  margin: 10px auto 20px;
+  padding: 8px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
 }
 
 .question-img {
   width: 100%;
-  height: auto;
   max-height: 400px;
   object-fit: contain;
   border: 1px solid #ccc;
