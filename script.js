@@ -5,7 +5,7 @@ const totalTime = totalQuestions * timePerQuestion;
 
 const questions = Array.from({ length: totalQuestions }, (_, i) => ({
   img: `questions/${i+1}.PNG`,
-  options: [1, 2, 3, 4],
+  options: [1, 2, 3, 4, 5],
 }));
 
 let correctAnswers = Array(totalQuestions).fill(null); // Loaded later from file
