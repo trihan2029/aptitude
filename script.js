@@ -1,7 +1,7 @@
-// ================= CONFIGURATION =================
+// ================= CONFIG =================
 const totalQuestions = 50;
-const timePerQuestion = 180; // seconds
-const totalTime = totalQuestions * timePerQuestion;
+const timePerQuestion = 180;
+let remainingTime = totalQuestions * timePerQuestion;
 
 // ================= STATE =================
 let questions = [];
@@ -10,80 +10,66 @@ let correctAnswers = [];
 let currentQuestion = 0;
 let answers = Array(totalQuestions).fill(null);
 let guessed = Array(totalQuestions).fill(false);
-
-let remainingTime = totalTime;
-let timerInterval;
-
 let perQuestionTimers = Array(totalQuestions).fill(0);
-let questionStartTime = Date.now();
 
-// Pause control
+let timerInterval = null;
 let isPaused = false;
-let pauseStartTime = null;
-let totalPausedTime = 0;
 
-// ================= UTIL =================
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
+// Time tracking
+let questionStartTime = null;
+
+// ================= UTILS =================
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
 }
 
 // ================= TIMER =================
 function startTimer() {
+  updateTimer();
   timerInterval = setInterval(() => {
-    if (!isPaused) {
-      remainingTime--;
-      updateTimer();
-      if (remainingTime <= 0) {
-        clearInterval(timerInterval);
-        submitTest();
-      }
+    if (isPaused) return;
+
+    remainingTime--;
+    updateTimer();
+
+    if (remainingTime <= 0) {
+      clearInterval(timerInterval);
+      submitTest();
     }
   }, 1000);
 }
 
 function updateTimer() {
-  const minutes = Math.floor(remainingTime / 60);
-  const seconds = remainingTime % 60;
-  document.getElementById('timer').textContent =
-    `⏰ Time Left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  const m = Math.floor(remainingTime / 60);
+  const s = remainingTime % 60;
+  document.getElementById("timer").textContent =
+    `⏰ Time Left: ${m}:${s < 10 ? "0" : ""}${s}`;
 }
 
-// ================= PAUSE / RESUME =================
+// ================= PAUSE =================
 function togglePause() {
-  const btn = document.getElementById('pauseBtn');
+  const btn = document.getElementById("pauseBtn");
 
   if (!isPaused) {
-    // PAUSE
+    saveTimeSpent();
     isPaused = true;
-    pauseStartTime = Date.now();
-    btn.textContent = '▶ Resume';
+    btn.textContent = "▶ Resume";
   } else {
-    // RESUME
     isPaused = false;
-    totalPausedTime += Date.now() - pauseStartTime;
-    pauseStartTime = null;
-    btn.textContent = '⏸ Pause';
+    questionStartTime = Date.now();
+    btn.textContent = "⏸ Pause";
   }
 }
 
-// ================= TIME TRACKING =================
+// ================= TIME TRACK =================
 function saveTimeSpent() {
-  if (isPaused) return;
+  if (questionStartTime === null || isPaused) return;
 
-  const now = Date.now();
-  const activeTime = Math.floor(
-    (now - questionStartTime - totalPausedTime) / 1000
-  );
-
-  if (currentQuestion >= 0 && currentQuestion < totalQuestions) {
-    perQuestionTimers[currentQuestion] += Math.max(0, activeTime);
-  }
-
-  questionStartTime = now;
-  totalPausedTime = 0;
+  const elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
+  perQuestionTimers[currentQuestion] += elapsed;
 }
 
 // ================= QUESTIONS =================
@@ -91,71 +77,62 @@ function loadQuestion(index) {
   saveTimeSpent();
 
   currentQuestion = index;
+  questionStartTime = Date.now();
+
   const q = questions[index];
+  document.getElementById("questionImage").src = q.img;
 
-  document.getElementById('questionImage').src = q.img;
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML = "";
 
-  const optionsDiv = document.getElementById('options');
-  optionsDiv.innerHTML = '';
+  q.options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.textContent = opt;
+    btn.onclick = () => {
+      answers[index] = opt;
+      loadQuestion(index);
+    };
 
-  q.options.forEach(option => {
-    const button = document.createElement('button');
-    button.textContent = option;
-    button.onclick = () => selectOption(index, option);
-
-    if (answers[index] === option) {
-      button.style.backgroundColor = '#4CAF50';
-      button.style.color = 'white';
+    if (answers[index] === opt) {
+      btn.style.background = "#4CAF50";
+      btn.style.color = "white";
     }
-
-    optionsDiv.appendChild(button);
+    optionsDiv.appendChild(btn);
   });
 
-  const guessBox = document.getElementById('guessCheckbox');
-  guessBox.checked = guessed[index];
-  guessBox.onchange = () => guessed[index] = guessBox.checked;
+  const g = document.getElementById("guessCheckbox");
+  g.checked = guessed[index];
+  g.onchange = () => guessed[index] = g.checked;
 
   updateUnanswered();
-
-  questionStartTime = Date.now();
-  totalPausedTime = 0;
 }
 
-function selectOption(qIndex, option) {
-  answers[qIndex] = option;
-  loadQuestion(qIndex);
-}
-
-// ================= NAVIGATION =================
+// ================= NAV =================
 function nextQuestion() {
-  if (currentQuestion < totalQuestions - 1) {
+  if (currentQuestion < totalQuestions - 1)
     loadQuestion(currentQuestion + 1);
-  }
 }
 
 function prevQuestion() {
-  if (currentQuestion > 0) {
+  if (currentQuestion > 0)
     loadQuestion(currentQuestion - 1);
-  }
 }
 
-// ================= STATUS PANEL =================
+// ================= STATUS =================
 function updateUnanswered() {
-  const list = document.getElementById('unansweredList');
-  list.innerHTML = '';
+  const div = document.getElementById("unansweredList");
+  div.innerHTML = "";
 
-  answers.forEach((ans, idx) => {
-    const span = document.createElement('span');
-    span.textContent = idx + 1;
-    span.style.margin = '5px';
-    span.style.cursor = 'pointer';
-    span.style.fontWeight = 'bold';
-
-    span.style.color = ans !== null ? 'green' : 'red';
-    if (guessed[idx]) span.style.border = '2px dashed orange';
-
-    span.onclick = () => loadQuestion(idx);
-    list.appendChild(span);
+  answers.forEach((a, i) => {
+    const s = document.createElement("span");
+    s.textContent = i + 1;
+    s.style.margin = "5px";
+    s.style.cursor = "pointer";
+    s.style.fontWeight = "bold";
+    s.style.color = a === null ? "red" : "green";
+    if (guessed[i]) s.style.border = "2px dashed orange";
+    s.onclick = () => loadQuestion(i);
+    div.appendChild(s);
   });
 }
 
@@ -165,68 +142,32 @@ function submitTest() {
   saveTimeSpent();
 
   let correct = 0;
-  let wrong = 0;
-
-  answers.forEach((ans, i) => {
-    if (ans !== null) {
-      ans === correctAnswers[i] ? correct++ : wrong++;
-    }
+  answers.forEach((a, i) => {
+    if (a === correctAnswers[i]) correct++;
   });
 
-  const percentage = ((correct / totalQuestions) * 100).toFixed(2);
-
   alert(
-    `✅ Test Completed\n\n` +
-    `Total Questions: ${totalQuestions}\n` +
-    `Correct: ${correct}\n` +
-    `Wrong: ${wrong}\n` +
-    `Percentage: ${percentage}%`
+    `Test Completed\n\nCorrect: ${correct}\nWrong: ${totalQuestions - correct}`
   );
-
-  generateReport();
-}
-
-// ================= REPORT =================
-function generateReport() {
-  let report = "Q | Your | Correct | Time(s) | Guessed\n";
-  report += "---------------------------------------\n";
-
-  for (let i = 0; i < totalQuestions; i++) {
-    if (answers[i] !== correctAnswers[i] || guessed[i]) {
-      report +=
-        `${i + 1} | ${answers[i] ?? 'NA'} | ${correctAnswers[i]} | ` +
-        `${perQuestionTimers[i]} | ${guessed[i] ? 'Yes' : 'No'}\n`;
-    }
-  }
-
-  const blob = new Blob([report], { type: "text/plain" });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = "exam_report.txt";
-  a.click();
 }
 
 // ================= LOAD & SHUFFLE =================
-function loadCorrectAnswers(fileUrl) {
-  fetch(fileUrl)
-    .then(res => res.text())
-    .then(text => {
-      const ans = text.trim().split('\n').map(Number);
+async function initTest() {
+  const res = await fetch("answers.txt");
+  const ans = (await res.text()).trim().split("\n").map(Number);
 
-      questions = Array.from({ length: totalQuestions }, (_, i) => ({
-        img: `questions/${i + 1}.PNG`,
-        options: [1, 2, 3, 4, 5],
-        correct: ans[i]
-      }));
+  questions = Array.from({ length: totalQuestions }, (_, i) => ({
+    img: `questions/${i + 1}.PNG`,
+    options: [1, 2, 3, 4, 5],
+    correct: ans[i]
+  }));
 
-      shuffleArray(questions);
-      correctAnswers = questions.map(q => q.correct);
-    });
-}
+  shuffleArray(questions);
+  correctAnswers = questions.map(q => q.correct);
 
-// ================= INIT =================
-window.onload = () => {
-  loadCorrectAnswers('answers.txt');
   loadQuestion(0);
   startTimer();
-};
+}
+
+// ================= START =================
+window.onload = initTest;
